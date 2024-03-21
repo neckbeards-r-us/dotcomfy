@@ -33,7 +33,7 @@ fn main() {
             // TODO: Figure out how to grab value from Option and check to see if it's username or
             // repo_url
             let _repo: Repository = if let Some(repo_url) = &repo_url {
-                if repo_url.contains("https://")
+                if repo_url.starts_with("https://")
                 /* && repo_url.contains("/dotfiles.git")*/
                 {
                     println!("Custom repo");
