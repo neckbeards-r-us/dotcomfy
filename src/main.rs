@@ -19,7 +19,11 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Commands {
-    Install { repo_url: Option<String> },
+    /// Install the repo
+    Install {
+        /// repo_url can be a full url, or just a username, or left empty
+        repo_url: Option<String>,
+    },
 }
 
 fn main() {
