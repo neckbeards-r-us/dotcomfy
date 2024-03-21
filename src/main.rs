@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
-use std::env;
-use std::process;
+use git2::Repository;
+// use std::env;
+// use std::process;
 
 // use dotcomfy::Config;
 
@@ -18,25 +19,35 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Commands {
-    Install { repo: Option<String> },
+    Install { repo_url: Option<String> },
 }
 
 fn main() {
     let args = Args::parse();
 
     match &args.command {
-        Commands::Install { repo } => {
+        Commands::Install { repo_url } => {
             // TODO: Figure out how to grab value from Option and check to see if it's username or
-            // repo
-            let repo = Some(repo).unwrap_or_else(|| println!("No username/repo passed"));
-            println!("{:?}", repo)
-            /*
-            if *repo.contains("https://") {
-                println!("{repo}")
-            } else {
-                println!("Didn't pass in a repo or GH username!")
+            // repo_url
+            let repo: Repository;
+
+            if let Some(repo_url) = &repo_url {
+                if repo_url.contains("https://") && repo_url.contains("/dotfiles.git") {
+                    repo = match Repository::clone(repo_url, "/tmp/dotfiles") {
+                        Ok(repo) => repo,
+                        Err(e) => panic!("Failed to clone: {}", e),
+                    };
+                } else {
+                    let repo_url = format!("https://github.com/{}/dotfiles.git", repo_url);
+                    repo = match Repository::clone(&repo_url, "/tmp/dotfiles") {
+                        Ok(repo) => repo,
+                        Err(e) => panic!("Failed to clone: {}", e),
+                    };
+                }
             }
-            */
+
+            let repo_head = repo.checkout_head({});
+            // println!("{:?}", repo_url.unwrap())
         }
     }
     /*
