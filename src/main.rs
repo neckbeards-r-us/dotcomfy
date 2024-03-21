@@ -25,29 +25,41 @@ enum Commands {
 fn main() {
     let args = Args::parse();
 
+    let dot_file_path = "/tmp/dotfiles";
+
     match &args.command {
         Commands::Install { repo_url } => {
+            println!("Installing: {repo_url:?}");
             // TODO: Figure out how to grab value from Option and check to see if it's username or
             // repo_url
-            let repo: Repository;
-
-            if let Some(repo_url) = &repo_url {
-                if repo_url.contains("https://") && repo_url.contains("/dotfiles.git") {
-                    repo = match Repository::clone(repo_url, "/tmp/dotfiles") {
+            let _repo: Repository = if let Some(repo_url) = &repo_url {
+                if repo_url.contains("https://")
+                /* && repo_url.contains("/dotfiles.git")*/
+                {
+                    println!("Custom repo");
+                    match Repository::clone(repo_url, dot_file_path) {
                         Ok(repo) => repo,
                         Err(e) => panic!("Failed to clone: {}", e),
-                    };
+                    }
                 } else {
+                    println!("Default repo");
                     let repo_url = format!("https://github.com/{}/dotfiles.git", repo_url);
-                    repo = match Repository::clone(&repo_url, "/tmp/dotfiles") {
+                    match Repository::clone(&repo_url, dot_file_path) {
                         Ok(repo) => repo,
                         Err(e) => panic!("Failed to clone: {}", e),
-                    };
+                    }
                 }
-            }
+            } else {
+                println!("Creating new repo at {dot_file_path}");
+                Repository::init(dot_file_path).expect("Could not create dotiles")
+            };
 
-            let repo_head = repo.checkout_head({});
+            // let checkout = git2::build::CheckoutBuilder::new();
+            //
+            // let repo_head = repo.checkout_head(checkout);
             // println!("{:?}", repo_url.unwrap())
+            // let head = repo.head().expect("So no head?");
+            // repo.checkout_head(head.into());
         }
     }
     /*
