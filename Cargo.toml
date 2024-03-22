@@ -16,9 +16,6 @@ description = "A simple tool for managing your dotfiles"
 clap = { version = "4", features = ["derive"] }
 git2 = { version = ">=0.18.3", default-features = false, features = ["https"] }
 
-[build-dependencies]
-clap_mangen = "0.2.20"
-
 # Set the default for dependencies.
 [profile.dev.package."*"]
 opt-level = 3
