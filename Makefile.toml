@@ -1,0 +1,14 @@
+# To use, make sure you `cargo install --force cargo-make`
+
+# Run `makers`
+[tasks.default]
+dependencies = ["clippy"]
+alias = "ci-flow"
+
+# Run `makers coverage`
+[tasks.coverage]
+alias = "coverage-tarpaulin"
+
+[tasks.help]
+command = "makers"
+args = ["--list-all-steps"]
