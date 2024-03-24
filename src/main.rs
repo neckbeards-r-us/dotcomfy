@@ -1,9 +1,7 @@
 use clap::{Parser, Subcommand};
 use git2::Repository;
-// use std::env;
-// use std::process;
 
-// use dotcomfy::Config;
+use dotcomfy::install_repo;
 
 #[derive(Parser)]
 #[command(
@@ -23,6 +21,8 @@ enum Commands {
     Install {
         /// repo_url can be a full url, or just a username, or left empty
         repo_url: Option<String>,
+        /// path to install dotfiles. relative to the current folder
+        path: Option<String>,
     },
 }
 
@@ -32,39 +32,7 @@ fn main() {
     let dot_file_path = "/tmp/dotfiles";
 
     match &args.command {
-        Commands::Install { repo_url } => {
-            println!("Installing: {repo_url:?}");
-            // TODO: Figure out how to grab value from Option and check to see if it's username or
-            // repo_url
-            let _repo: Repository = if let Some(repo_url) = &repo_url {
-                if repo_url.starts_with("https://")
-                /* && repo_url.contains("/dotfiles.git")*/
-                {
-                    println!("Custom repo");
-                    match Repository::clone(repo_url, dot_file_path) {
-                        Ok(repo) => repo,
-                        Err(e) => panic!("Failed to clone: {}", e),
-                    }
-                } else {
-                    println!("Default repo");
-                    let repo_url = format!("https://github.com/{}/dotfiles.git", repo_url);
-                    match Repository::clone(&repo_url, dot_file_path) {
-                        Ok(repo) => repo,
-                        Err(e) => panic!("Failed to clone: {}", e),
-                    }
-                }
-            } else {
-                println!("Creating new repo at {dot_file_path}");
-                Repository::init(dot_file_path).expect("Could not create dotiles")
-            };
-
-            // let checkout = git2::build::CheckoutBuilder::new();
-            //
-            // let repo_head = repo.checkout_head(checkout);
-            // println!("{:?}", repo_url.unwrap())
-            // let head = repo.head().expect("So no head?");
-            // repo.checkout_head(head.into());
-        }
+        Commands::Install { repo_url, path } => install_repo(repo_url, path),
     }
     /*
     let config = Config::build(&args).unwrap_or_else(|err| {
