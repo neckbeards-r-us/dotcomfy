@@ -1,0 +1,39 @@
+# To use, make sure you `cargo install --force cargo-make`
+
+# Run `makers`
+[tasks.default]
+alias = "ci-flow"
+
+# Run `makers coverage`
+[tasks.coverage]
+alias = "coverage-tarpaulin"
+
+[tasks.help]
+command = "makers"
+args = ["--list-all-steps"]
+
+[tasks.about]
+install_crate = "cargo-about"
+command = "cargo"
+args = ["about", "generate", "-o", "licenses.html", "about.hbs"]
+
+[tasks.audit]
+install_crate = "cargo-audit"
+command = "cargo"
+args = ["audit"]
+
+[tasks.flamegraph]
+install_crate = "cargo-flamegraph"
+command = "cargo"
+args = ["flamegraph"]
+
+[tasks.machete]
+install_carate = "cargo-machete"
+command = "cargo"
+args = ["machete"]
+
+[tasks.cut]
+alias = "machete"
+
+[tasks.lint]
+alias = "clippy"
