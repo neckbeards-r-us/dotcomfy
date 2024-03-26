@@ -13,7 +13,8 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
         Path::new(path)
     } else {
         // TODO: Figure out how to make this work
-        Path::new(dirs::home_dir()).join("/.config").as_path()
+        let home_dir: &Path = dirs::home_dir().clone().unwrap().as_path();
+        Path::new(home_dir.join("/.config").as_path())
     };
     let _repo: Repository = if let Some(repo_url) = &repo_url {
         if repo_url.starts_with("https://")
