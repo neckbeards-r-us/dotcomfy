@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand};
-use git2::Repository;
 
 use dotcomfy::install_repo;
 
@@ -17,19 +16,18 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Install the repo
+    /// Install dotfiles from a git repo
     Install {
-        /// repo_url can be a full url, or just a username, or left empty
+        /// repo_url can be a full url of a git repo, or just a GitHub username
         repo_url: Option<String>,
-        /// path to install dotfiles. relative to the current folder
+        /// Path to install dotfiles
+        #[arg(short, long)]
         path: Option<String>,
     },
 }
 
 fn main() {
     let args = Args::parse();
-
-    let dot_file_path = "/tmp/dotfiles";
 
     match &args.command {
         Commands::Install { repo_url, path } => install_repo(repo_url, path),
