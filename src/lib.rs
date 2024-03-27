@@ -11,13 +11,14 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
     let dot_files_path = "/tmp/dotfiles";
 
     // @REF [Path vs PathBuf](https://nick.groenen.me/notes/rust-path-vs-pathbuf/)
-    let mut pb = PathBuf::from(dot_files_path);
+    let mut home_path = dirs::config_local_dir().unwrap();
+
     if let Some(path) = path {
-        pb = PathBuf::from(path);
+        home_path = PathBuf::from(path);
     } else if let Some(cfg) = dirs::config_local_dir() {
-        pb = cfg;
+        home_path = cfg;
     } else if let Some(cfg) = dirs::config_dir() {
-        pb = cfg;
+        home_path = cfg;
     }
 
     let _repo: Repository = if let Some(repo_url) = &repo_url {
@@ -42,10 +43,9 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
         Repository::init(dot_files_path).expect("Could not create dotiles")
     };
 
-    let _file_renaming = visit_dirs(pb.as_path(), &rename_files);
+    // let _file_renaming = visit_dirs(home_path.as_path(), &rename_files);
 
-    // TODO: Work with std::fs::{read_dir, rename} to rename all old config files that would be
-    // overwritten.
+    // TODO: rename old config folder and move files in repo to be new config files
 
     // let checkout = git2::build::CheckoutBuilder::new();
     //
@@ -61,6 +61,7 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
 // TODO: Look at changing &Path to AsRef<Path>
 fn visit_dirs(dir: &Path, cb: &dyn Fn(&DirEntry) -> io::Result<()>) -> io::Result<()> {
     if dir.is_dir() {
+        println!("{dir:?}");
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
