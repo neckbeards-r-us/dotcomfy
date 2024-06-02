@@ -81,15 +81,19 @@ fn visit_dirs(dir: &Path, cb: &dyn Fn(&DirEntry) -> io::Result<()>) -> io::Resul
 // TODO: Turn this spaghetti into something that actually works.
 fn rename_files(dot_files_path: &Path, tmp_path: &Path) -> io::Result<()> {
     for entry in fs::read_dir(tmp_path)? {
-        let new_path = entry?;
-        let new_entry = new_path.path().file_name();
-        let old_path = dot_files_path.join(new_path.unwrap());
+        let new_path = entry?.path();
+        // What am I even doing with `new_entry`?
+        if let new_entry = new_path.file_name() {
+            // At this point, `new_entry` is an OsStr
+        };
+        // 
+        let old_path = dot_files_path.join(new_path.as_path());
         match old_path.try_exists() {
             Ok(true) => fs::rename(old_path, new_path),
             Ok(false) => fs::rename(old_path, new_path),
             Err(e) => panic!("Failed to rename: {}", e),
-        }
+        }?;
+        println!("{entry:?}");
     }
-    println!("{entry:?}");
     Ok(())
 }
