@@ -11,6 +11,7 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
     let tmp_path = "/tmp/dotfiles";
 
     // @REF [Path vs PathBuf](https://nick.groenen.me/notes/rust-path-vs-pathbuf/)
+    // Assuming here that users want to just use default config directory
     let mut dot_files_path = dirs::config_local_dir().unwrap();
 
     if let Some(path) = path {
@@ -79,14 +80,23 @@ fn visit_dirs(dir: &Path, cb: &dyn Fn(&DirEntry) -> io::Result<()>) -> io::Resul
 */
 
 // TODO: Turn this spaghetti into something that actually works.
+// dot_files_path: path to user's existing dotfiles directory
+// tmp_path: path to temporary directory where the repo is cloned
+
 fn rename_files(dot_files_path: &Path, tmp_path: &Path) -> io::Result<()> {
+    // Iterate over each item in tmp_path. Checking tmp_path first before
+    // doing any renaming, as I don't want to rename/move existing files
+    // that would not be affected by dotcomfy installation.
     for entry in fs::read_dir(tmp_path)? {
         let new_path = entry?.path();
         // What am I even doing with `new_entry`?
         if let new_entry = new_path.file_name() {
             // At this point, `new_entry` is an OsStr
+            // Want to check to see if new_entry has a corresponding entry
+            // in dot_files_path. If so, rename corresponding entry to
+            // {corresponding_entry}.pre-dotcomfy, put new_entry in its place.
         };
-        // 
+        // I think I need to move the following logic into the new_entry block.
         let old_path = dot_files_path.join(new_path.as_path());
         match old_path.try_exists() {
             Ok(true) => fs::rename(old_path, new_path),
