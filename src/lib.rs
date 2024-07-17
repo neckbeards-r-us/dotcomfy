@@ -4,6 +4,7 @@ use std::{
     fs::{self, DirEntry},
     io,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 use walkdir::WalkDir;
 
@@ -12,15 +13,11 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
     let dotcomfy_path = "/tmp/dotfiles";
 
     // @REF [Path vs PathBuf](https://nick.groenen.me/notes/rust-path-vs-pathbuf/)
-    // Assuming here that users want to just use default config directory
-    let mut old_dotfiles_path = dirs::config_local_dir().unwrap();
+    // Use home directory by default
+    let mut old_dotfiles_path = dirs::home_dir().unwrap();
 
     if let Some(path) = path {
         old_dotfiles_path = PathBuf::from(path);
-    } else if let Some(cfg) = dirs::config_local_dir() {
-        old_dotfiles_path = cfg;
-    } else if let Some(cfg) = dirs::config_dir() {
-        old_dotfiles_path = cfg;
     }
 
     let _repo: Repository = if let Some(repo_url) = &repo_url {
@@ -67,26 +64,53 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
     for entry in WalkDir::new(dotcomfy_path).min_depth(1) {
         let entry = entry?;
         let new_path = entry.path();
-        println!("{new_path:?}");
+        let dotcomfy_path_str = dotcomfy_path.to_str().unwrap();
+        println!("New path: {new_path:?}");
         // We don't care about git files
         if new_path.to_str().unwrap().contains(".git") {
-            break;
+            println!("Skipping git stuff");
+        } else if new_path.to_str() == Some(&(dotcomfy_path_str.to_owned() + "README.md")) {
+            // In this condition, I'm trying to see if the entry is the Git
+            // repo's surface level README.md. Right now, it's not being
+            // caught for some reason.
+            println!("Skipping repo's README");
+        } else {
+            if let Some(new_entry) = &new_path.file_name() {
+                if new_entry.to_str().unwrap().contains(".") {
+                    // center_path represents the path of the directory entry
+                    // with the dotcomfy_path prefix removed.
+                    let center_path = PathBuf::from_str(
+                        &new_path
+                            .to_str()
+                            .unwrap()
+                            .strip_prefix(dotcomfy_path.to_str().unwrap())
+                            .unwrap(),
+                    );
+                    let old_path = append_to_path(&old_dotfiles_path, &center_path.unwrap());
+                    println!("Old path: {old_path:?}");
+                    // Want to check to see if new_entry has a corresponding entry
+                    // in old_dotfiles_path. If so, rename corresponding entry to
+                    // {corresponding_entry}.pre-dotcomfy, put new_entry symlink in its place.
+                    match old_path.try_exists() {
+                        Ok(true) => {
+                            println!("Old path exists, renaming to {old_path:?}.pre-dotcomfy")
+                        }
+                        Ok(false) => println!("Old path DOES NOT exist, just creating symlink"),
+                        Err(e) => {
+                            panic!(
+                                "Something went wrong when checking if {old_path:?} exists: {}",
+                                e
+                            )
+                        } //     Ok(true) => fs::rename(old_path, new_path),
+                          //     Ok(false) => fs::rename(old_path, new_path),
+                          //     Err(e) => panic!("Failed to rename: {}", e),
+                    };
+                } else {
+                    println!("Ignoring directories");
+                }
+            }
         }
-        //let new_entry = new_path.file_name()?.to_os_string();
-        if let Some(new_entry) = &new_path.file_name() {
-            let old_path = append_to_path(&old_dotfiles_path, &new_entry);
-            println!("{old_path:?}");
-            // At this point, `new_entry` is an OsStr
-            // Want to check to see if new_entry has a corresponding entry
-            // in old_dotfiles_path. If so, rename corresponding entry to
-            // {corresponding_entry}.pre-dotcomfy, put new_entry in its place.
-            // I think I need to move the following logic into the new_entry block.
-            // match old_path.try_exists() {
-            //     Ok(true) => fs::rename(old_path, new_path),
-            //     Ok(false) => fs::rename(old_path, new_path),
-            //     Err(e) => panic!("Failed to rename: {}", e),
-            // }?;
-        }
+        println!();
     }
     Ok(())
 }
