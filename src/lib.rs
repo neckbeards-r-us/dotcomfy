@@ -76,7 +76,10 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
             println!("Skipping repo's README");
         } else {
             if let Some(new_entry) = &new_path.file_name() {
-                if new_entry.to_str().unwrap().contains(".") {
+                // TODO: For some reason, after adding this condition, the program
+                //       terminates once it hits the .config directory. It should
+                //       just continue on, but it doesn't??????????
+                if fs::metadata(new_entry)?.is_file() {
                     // center_path represents the path of the directory entry
                     // with the dotcomfy_path prefix removed.
                     let center_path = PathBuf::from_str(
@@ -93,7 +96,13 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
                     // {corresponding_entry}.pre-dotcomfy, put new_entry symlink in its place.
                     match old_path.try_exists() {
                         Ok(true) => {
-                            println!("Old path exists, renaming to {old_path:?}.pre-dotcomfy")
+                            let mut new_name = old_path.clone();
+                            new_name.as_mut_os_string().push(".pre-dotcomfy");
+                            println!("Old path exists, renaming to {new_name:?}");
+                            let _rename_result = match fs::rename(old_path, new_name) {
+                                Ok(()) => continue,
+                                Err(e) => println!("Error with renaming: {}", e),
+                            };
                         }
                         Ok(false) => println!("Old path DOES NOT exist, just creating symlink"),
                         Err(e) => {
@@ -105,12 +114,9 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
                           //     Ok(false) => fs::rename(old_path, new_path),
                           //     Err(e) => panic!("Failed to rename: {}", e),
                     };
-                } else {
-                    println!("Ignoring directories");
                 }
             }
         }
-        println!();
     }
     Ok(())
 }
