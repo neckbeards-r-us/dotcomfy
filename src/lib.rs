@@ -131,9 +131,9 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
                             // exist. Need to create dir structure if this error occurs.
                             Err(e) => match e.kind() {
                                 ErrorKind::NotFound => match fs::create_dir_all(dir_structure) {
-                                    Ok(()) => continue,
+                                    Ok(()) => println!("Created directory structure"),
                                     Err(e) => {
-                                        println!("Error createing directory structure: {}", e)
+                                        println!("Error creating directory structure: {}", e)
                                     }
                                 },
                                 _ => println!("Encountering a non-NotFound error: {}", e),
