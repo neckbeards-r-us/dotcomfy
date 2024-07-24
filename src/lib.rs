@@ -1,16 +1,25 @@
 use git2::Repository;
 use std::{
     ffi::{OsStr, OsString},
-    fs::{self, DirEntry},
-    io,
-    path::{Path, PathBuf},
+    fs,
+    io::{self, ErrorKind},
+    os::unix,
+    path::PathBuf,
     str::FromStr,
 };
 use walkdir::WalkDir;
 
 pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
-    println!("Installing {repo_url:?} at {path:?}");
-    let tmp_path = "/tmp/dotfiles";
+    // println!("Installing {repo_url:?} at {path:?}");
+    let dotcomfy_path = match dirs::home_dir()
+        .unwrap()
+        .join(".dotcomfy")
+        .into_os_string()
+        .into_string()
+    {
+        Ok(path) => path,
+        Err(e) => panic!("Failed to convert PathBuf to String: {e:?}"),
+    };
 
     // @REF [Path vs PathBuf](https://nick.groenen.me/notes/rust-path-vs-pathbuf/)
     // Use home directory by default
@@ -24,22 +33,22 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
         if repo_url.starts_with("https://")
         /* && repo_url.contains("/dotfiles.git")*/
         {
-            println!("Custom repo");
-            match Repository::clone(repo_url, tmp_path) {
+            // println!("Custom repo");
+            match Repository::clone(repo_url, dotcomfy_path.clone()) {
                 Ok(repo) => repo,
                 Err(e) => panic!("Failed to clone: {}", e),
             }
         } else {
-            println!("Default repo");
+            // println!("Default repo");
             let repo_url = format!("https://github.com/{}/dotfiles.git", repo_url);
-            match Repository::clone(&repo_url, tmp_path) {
+            match Repository::clone(&repo_url, dotcomfy_path.clone()) {
                 Ok(repo) => repo,
                 Err(e) => panic!("Failed to clone: {}", e),
             }
         }
     } else {
-        println!("Creating new repo at {tmp_path}");
-        Repository::init(tmp_path).expect("Could not create dotiles")
+        // println!("Creating new repo at {dotcomfy_path}");
+        Repository::init(dotcomfy_path.clone()).expect("Could not create dotiles")
     };
 
     // let _file_renaming = rename_files(&dot_files_path, &PathBuf::from(tmp_path));
@@ -51,12 +60,12 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
     // let checkout = git2::build::CheckoutBuilder::new();
     //
     // let repo_head = repo.checkout_head(checkout);
-    // println!("{:?}", repo_url.unwrap())
+    // // println!("{:?}", repo_url.unwrap())
     // let head = repo.head().expect("So no head?");
     // repo.checkout_head(head.into());
 
     // Cleanup
-    let _remove_tmp_dir = fs::remove_dir_all(tmp_path);
+    // let _remove_tmp_dir = fs::remove_dir_all(dotcomfy_path);
 }
 
 fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> io::Result<()> {
@@ -65,57 +74,87 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
         let entry = entry?;
         let new_path = entry.path();
         let dotcomfy_path_str = dotcomfy_path.to_str().unwrap();
-        println!("New path: {new_path:?}");
         // We don't care about git files
         if new_path.to_str().unwrap().contains(".git") {
-            println!("Skipping git stuff");
+            // println!("Skipping git stuff");
         } else if new_path.to_str() == Some(&(dotcomfy_path_str.to_owned() + "README.md")) {
             // In this condition, I'm trying to see if the entry is the Git
             // repo's surface level README.md. Right now, it's not being
             // caught for some reason.
-            println!("Skipping repo's README");
+            // println!("Skipping repo's README");
         } else {
-            if let Some(new_entry) = &new_path.file_name() {
-                // TODO: For some reason, after adding this condition, the program
-                //       terminates once it hits the .config directory. It should
-                //       just continue on, but it doesn't??????????
-                if fs::metadata(new_entry)?.is_file() {
-                    // center_path represents the path of the directory entry
-                    // with the dotcomfy_path prefix removed.
-                    let center_path = PathBuf::from_str(
-                        &new_path
-                            .to_str()
-                            .unwrap()
-                            .strip_prefix(dotcomfy_path.to_str().unwrap())
-                            .unwrap(),
-                    );
-                    let old_path = append_to_path(&old_dotfiles_path, &center_path.unwrap());
-                    println!("Old path: {old_path:?}");
-                    // Want to check to see if new_entry has a corresponding entry
-                    // in old_dotfiles_path. If so, rename corresponding entry to
-                    // {corresponding_entry}.pre-dotcomfy, put new_entry symlink in its place.
-                    match old_path.try_exists() {
-                        Ok(true) => {
-                            let mut new_name = old_path.clone();
-                            new_name.as_mut_os_string().push(".pre-dotcomfy");
-                            println!("Old path exists, renaming to {new_name:?}");
-                            let _rename_result = match fs::rename(old_path, new_name) {
-                                Ok(()) => continue,
-                                Err(e) => println!("Error with renaming: {}", e),
-                            };
-                        }
-                        Ok(false) => println!("Old path DOES NOT exist, just creating symlink"),
-                        Err(e) => {
-                            panic!(
-                                "Something went wrong when checking if {old_path:?} exists: {}",
-                                e
-                            )
-                        } //     Ok(true) => fs::rename(old_path, new_path),
-                          //     Ok(false) => fs::rename(old_path, new_path),
-                          //     Err(e) => panic!("Failed to rename: {}", e),
-                    };
-                }
+            // We don't want to rename directories
+            // println!("New path: {new_path:?}");
+            if fs::metadata(new_path)?.is_dir() {
+                continue;
+            } else {
+                // center_path represents the path of the directory entry
+                // with the dotcomfy_path prefix removed.
+                let center_path = PathBuf::from_str(
+                    &new_path
+                        .to_str()
+                        .unwrap()
+                        .strip_prefix(dotcomfy_path.to_str().unwrap())
+                        .unwrap(),
+                );
+                let old_path = append_to_path(&old_dotfiles_path, &center_path.unwrap());
+                // println!("Old path: {old_path:?}");
+                // Want to check to see if new_entry has a corresponding entry
+                // in old_dotfiles_path. If so, rename corresponding entry to
+                // {corresponding_entry}.pre-dotcomfy, put new_entry symlink in its place.
+                match old_path.try_exists() {
+                    Ok(true) => {
+                        let mut new_name = old_path.clone();
+                        let old_name = old_path.clone();
+                        new_name.as_mut_os_string().push(".pre-dotcomfy");
+                        // println!("Old path exists, renaming to {new_name:?}");
+                        let _rename_result = match fs::rename(old_name, new_name) {
+                            Ok(()) => println!("Rename success"),
+                            Err(e) => println!("Error with renaming: {}", e),
+                        };
+                        let _symlink_result = match unix::fs::symlink(new_path, old_path) {
+                            Ok(()) => println!("Symlink success"),
+                            Err(e) => println!("Error with symlinking: {}", e),
+                        };
+                    }
+                    Ok(false) => {
+                        // println!("Old path DOES NOT exist, just creating symlink");
+                        // Creating a path of the directory structure above the current entry in
+                        // case it doesn't already exist, so we can create it.
+                        let mut dir_structure = old_path.clone();
+                        dir_structure.pop();
+
+                        let touch_file = old_path.clone();
+                        let _file_creation_result = match fs::write(touch_file, String::from("")) {
+                            Ok(()) => continue,
+                            // Error here likely means that the directory structure above does not
+                            // exist. Need to create dir structure if this error occurs.
+                            Err(e) => match e.kind() {
+                                ErrorKind::NotFound => match fs::create_dir_all(dir_structure) {
+                                    Ok(()) => continue,
+                                    Err(e) => {
+                                        println!("Error createing directory structure: {}", e)
+                                    }
+                                },
+                                _ => println!("Encountering a non-NotFound error: {}", e),
+                            },
+                        };
+                        let _symlink_result = match unix::fs::symlink(new_path, old_path) {
+                            Ok(()) => println!("Symlink success"),
+                            Err(e) => println!("Error with symlinking: {}", e),
+                        };
+                    }
+                    Err(e) => {
+                        panic!(
+                            "Something went wrong when checking if {old_path:?} exists: {}",
+                            e
+                        )
+                    } //     Ok(true) => fs::rename(old_path, new_path),
+                      //     Ok(false) => fs::rename(old_path, new_path),
+                      //     Err(e) => panic!("Failed to rename: {}", e),
+                };
             }
+            // println!();
         }
     }
     Ok(())
