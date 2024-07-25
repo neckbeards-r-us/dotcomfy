@@ -26,3 +26,6 @@ opt-level = 3
 strip = true      #"symbols"
 lto = "thin"
 codegen-units = 1 # maximize size-reduction optimizations at the expense of build time
+
+[dev-dependencies]
+tempdir = ">= 0.3.7"

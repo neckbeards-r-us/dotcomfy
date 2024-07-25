@@ -165,3 +165,34 @@ fn append_to_path(p: impl Into<OsString>, s: impl AsRef<OsStr>) -> PathBuf {
     p.push(s);
     p.into()
 }
+
+#[allow(unused_imports)]
+#[cfg(test)]
+mod tests {
+    use tempdir::TempDir;
+    use std::io::Write;
+    use std::fs::{File, read};
+    use std::os::unix::fs::symlink;
+    use super::*;
+
+    #[test]
+    fn test_symlink() -> Result<(), std::io::Error> {
+        // Clean up is handled when `drop`ed
+        let tmp = TempDir::new("test_symlink")?;
+
+        let file_path = tmp.path().join("foo.txt");
+        let mut file = File::create(file_path.clone())?;
+        let sym_path = tmp.path().join("sym.txt");
+
+        writeln!(file, "Rust is confusing")?;
+
+        symlink(file_path.clone(), sym_path.clone())?;
+
+        let data = read(file_path)?;
+        let sym_data = read(sym_path)?;
+
+        assert_eq!(data, sym_data);
+
+        Ok(())
+    }
+}
