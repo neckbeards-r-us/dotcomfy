@@ -68,6 +68,8 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
     // let _remove_tmp_dir = fs::remove_dir_all(dotcomfy_path);
 }
 
+// TODO: Break this up into a couple of functions, returning the paths of the dotcomfy file &
+//       corresponding symlink.
 fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> io::Result<()> {
     // Skip empty directories
     for entry in WalkDir::new(dotcomfy_path).min_depth(1) {
@@ -193,8 +195,8 @@ mod tests {
     fn test_symlink_file_exists() -> Result<(), std::io::Error> {
         let mut dotcomfy_path: PathBuf = TempDir::new(".dotcomfy")?.path().to_owned().to_path_buf();
         let mut dotfiles_path: PathBuf = TempDir::new(".dotfiles")?.path().to_owned().to_path_buf();
-        // dotcomfy_path.push("./config/neofetch");
-        // dotfiles_path.push("./config/neofetch");
+        dotcomfy_path.push("./config/neofetch");
+        dotfiles_path.push("./config/neofetch");
         let _ = match Repository::clone(
             &String::from("https://github.com/neckbeards-r-us/dotfiles.git"),
             dotcomfy_path.clone(),
