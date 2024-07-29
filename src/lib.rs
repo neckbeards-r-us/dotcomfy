@@ -10,7 +10,7 @@ use std::{
 use walkdir::WalkDir;
 
 pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
-    // println!("Installing {repo_url:?} at {path:?}");
+    println!("Installing {repo_url:?} at {path:?}");
     let dotcomfy_path = match dirs::home_dir()
         .unwrap()
         .join(".dotcomfy")
@@ -33,13 +33,13 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
         if repo_url.starts_with("https://")
         /* && repo_url.contains("/dotfiles.git")*/
         {
-            // println!("Custom repo");
+            println!("Custom repo");
             match Repository::clone(repo_url, dotcomfy_path.clone()) {
                 Ok(repo) => repo,
                 Err(e) => panic!("Failed to clone: {}", e),
             }
         } else {
-            // println!("Default repo");
+            println!("Default repo");
             let repo_url = format!("https://github.com/{}/dotfiles.git", repo_url);
             match Repository::clone(&repo_url, dotcomfy_path.clone()) {
                 Ok(repo) => repo,
@@ -47,7 +47,7 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
             }
         }
     } else {
-        // println!("Creating new repo at {dotcomfy_path}");
+        println!("Creating new repo at {dotcomfy_path}");
         Repository::init(dotcomfy_path.clone()).expect("Could not create dotiles")
     };
 
@@ -60,7 +60,7 @@ pub fn install_repo(repo_url: &Option<String>, path: &Option<String>) {
     // let checkout = git2::build::CheckoutBuilder::new();
     //
     // let repo_head = repo.checkout_head(checkout);
-    // // println!("{:?}", repo_url.unwrap())
+    // println!("{:?}", repo_url.unwrap())
     // let head = repo.head().expect("So no head?");
     // repo.checkout_head(head.into());
 
@@ -76,15 +76,15 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
         let dotcomfy_path_str = dotcomfy_path.to_str().unwrap();
         // We don't care about git files
         if new_path.to_str().unwrap().contains(".git") {
-            // println!("Skipping git stuff");
+            println!("Skipping git stuff");
         } else if new_path.to_str() == Some(&(dotcomfy_path_str.to_owned() + "README.md")) {
             // In this condition, I'm trying to see if the entry is the Git
             // repo's surface level README.md. Right now, it's not being
             // caught for some reason.
-            // println!("Skipping repo's README");
+            println!("Skipping repo's README");
         } else {
             // We don't want to rename directories
-            // println!("New path: {new_path:?}");
+            println!("New path: {new_path:?}");
             if fs::metadata(new_path)?.is_dir() {
                 continue;
             } else {
@@ -98,7 +98,7 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
                         .unwrap(),
                 );
                 let old_path = append_to_path(&old_dotfiles_path, &center_path.unwrap());
-                // println!("Old path: {old_path:?}");
+                println!("Old path: {old_path:?}");
                 // Want to check to see if new_entry has a corresponding entry
                 // in old_dotfiles_path. If so, rename corresponding entry to
                 // {corresponding_entry}.pre-dotcomfy, put new_entry symlink in its place.
@@ -107,7 +107,7 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
                         let mut new_name = old_path.clone();
                         let old_name = old_path.clone();
                         new_name.as_mut_os_string().push(".pre-dotcomfy");
-                        // println!("Old path exists, renaming to {new_name:?}");
+                        println!("Old path exists, renaming to {new_name:?}");
                         let _rename_result = match fs::rename(old_name, new_name) {
                             Ok(()) => println!("Rename success"),
                             Err(e) => println!("Error with renaming: {}", e),
@@ -118,27 +118,17 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
                         };
                     }
                     Ok(false) => {
-                        // println!("Old path DOES NOT exist, just creating symlink");
+                        println!("Old path DOES NOT exist, just creating symlink");
                         // Creating a path of the directory structure above the current entry in
                         // case it doesn't already exist, so we can create it.
                         let mut dir_structure = old_path.clone();
                         dir_structure.pop();
 
-                        let touch_file = old_path.clone();
-                        let _file_creation_result = match fs::write(touch_file, String::from("")) {
-                            Ok(()) => continue,
-                            // Error here likely means that the directory structure above does not
-                            // exist. Need to create dir structure if this error occurs.
-                            Err(e) => match e.kind() {
-                                ErrorKind::NotFound => match fs::create_dir_all(dir_structure) {
-                                    Ok(()) => println!("Created directory structure"),
-                                    Err(e) => {
-                                        println!("Error creating directory structure: {}", e)
-                                    }
-                                },
-                                _ => println!("Encountering a non-NotFound error: {}", e),
-                            },
+                        let _file_creation_result = match fs::create_dir_all(dir_structure) {
+                            Ok(()) => println!("Created directory structure"),
+                            Err(e) => println!("Error creating directory structure: {}", e),
                         };
+
                         let _symlink_result = match unix::fs::symlink(new_path, old_path) {
                             Ok(()) => println!("Symlink success"),
                             Err(e) => println!("Error with symlinking: {}", e),
@@ -154,7 +144,7 @@ fn rename_symlink_unix(old_dotfiles_path: &PathBuf, dotcomfy_path: &PathBuf) -> 
                       //     Err(e) => panic!("Failed to rename: {}", e),
                 };
             }
-            // println!();
+            println!();
         }
     }
     Ok(())
@@ -169,11 +159,14 @@ fn append_to_path(p: impl Into<OsString>, s: impl AsRef<OsStr>) -> PathBuf {
 #[allow(unused_imports)]
 #[cfg(test)]
 mod tests {
-    use tempdir::TempDir;
-    use std::io::Write;
-    use std::fs::{File, read};
-    use std::os::unix::fs::symlink;
     use super::*;
+    use git2::Repository;
+    use std::fs::{read, File};
+    use std::io::Write;
+    use std::os::unix::fs::symlink;
+    use std::path::Path;
+    use std::path::PathBuf;
+    use tempdir::TempDir;
 
     #[test]
     fn test_symlink() -> Result<(), std::io::Error> {
@@ -192,6 +185,64 @@ mod tests {
         let sym_data = read(sym_path)?;
 
         assert_eq!(data, sym_data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_symlink_file_exists() -> Result<(), std::io::Error> {
+        let mut dotcomfy_path: PathBuf = TempDir::new(".dotcomfy")?.path().to_owned().to_path_buf();
+        let mut dotfiles_path: PathBuf = TempDir::new(".dotfiles")?.path().to_owned().to_path_buf();
+        // dotcomfy_path.push("./config/neofetch");
+        // dotfiles_path.push("./config/neofetch");
+        let _ = match Repository::clone(
+            &String::from("https://github.com/neckbeards-r-us/dotfiles.git"),
+            dotcomfy_path.clone(),
+        ) {
+            Ok(repo) => repo,
+            Err(e) => panic!("Failed to clone: {}", e),
+        };
+        let _ = match fs::create_dir_all(dotfiles_path.clone()) {
+            Ok(()) => println!("Created directory structure"),
+            Err(e) => println!("Error creating directory structure: {}", e),
+        };
+        let existing_file_path = dotfiles_path.clone().join("config.conf");
+        let mut existing_file = File::create(existing_file_path)?;
+        writeln!(
+            existing_file,
+            "This line should not show up if symlinking works properly"
+        )?;
+        let _ = match rename_symlink_unix(&dotfiles_path, &dotcomfy_path) {
+            Ok(()) => println!("Rename/symlink successful!"),
+            Err(e) => println!("Error when renaming/symlinking existing file: {}", e),
+        };
+        dotcomfy_path.push("config.conf");
+        dotfiles_path.push("config.conf");
+
+        let data = match read(dotcomfy_path) {
+            Ok(contents) => contents,
+            Err(e) => {
+                if e.kind() == ErrorKind::NotFound {
+                    println!("dotcomfy file not found");
+                    vec![0]
+                } else {
+                    vec![0]
+                }
+            }
+        };
+        let symlink_data = match read(dotfiles_path) {
+            Ok(contents) => contents,
+            Err(e) => {
+                if e.kind() == ErrorKind::NotFound {
+                    println!("symlink not found");
+                    vec![0]
+                } else {
+                    vec![0]
+                }
+            }
+        };
+
+        assert_eq!(data, symlink_data);
 
         Ok(())
     }
