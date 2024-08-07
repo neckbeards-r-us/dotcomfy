@@ -1,11 +1,13 @@
 use core::panic;
 use git2::Repository;
 use std::{
+    error::Error,
     ffi::{OsStr, OsString},
     fs,
     io::{self, ErrorKind},
     os::unix,
     path::PathBuf,
+    result::Result,
     str::FromStr,
 };
 use walkdir::WalkDir;
@@ -74,7 +76,7 @@ fn rename_symlink_unix(
     old_dotfiles_path: &PathBuf,
     dotcomfy_path: &PathBuf,
     new_path: &PathBuf,
-) -> io::Result<PathBuf> {
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     // center_path represents the path of the directory entry
     // with the dotcomfy_path prefix removed.
     let center_path = PathBuf::from_str(
@@ -128,7 +130,7 @@ fn rename_symlink_unix(
                 "Something went wrong when checking if {old_path:?} exists: {}",
                 e
             );
-            Err(e)
+            Err(Box::new(e))
         }
     }
 }
@@ -142,9 +144,12 @@ fn append_to_path(p: impl Into<OsString>, s: impl AsRef<OsStr>) -> PathBuf {
 #[allow(unused_imports)]
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
+    use crate::rename_symlink_unix;
     use git2::Repository;
+    use std::fs;
     use std::fs::{read, File};
+    use std::io::ErrorKind;
     use std::io::Write;
     use std::os::unix::fs::symlink;
     use std::path::Path;
@@ -176,8 +181,8 @@ mod tests {
     fn test_symlink_file_exists() -> Result<(), std::io::Error> {
         let mut dotcomfy_path: PathBuf = TempDir::new(".dotcomfy")?.path().to_owned().to_path_buf();
         let mut dotfiles_path: PathBuf = TempDir::new(".dotfiles")?.path().to_owned().to_path_buf();
-        dotcomfy_path.push("./config/neofetch");
-        dotfiles_path.push("./config/neofetch");
+        let mut new_path: PathBuf = dotcomfy_path.clone();
+        new_path.push(".config/neofetch");
         let _ = match Repository::clone(
             &String::from("https://github.com/neckbeards-r-us/dotfiles.git"),
             dotcomfy_path.clone(),
@@ -185,6 +190,7 @@ mod tests {
             Ok(repo) => repo,
             Err(e) => panic!("Failed to clone: {}", e),
         };
+        // dotfiles_path.push(".config/neofetch");
         let _ = match fs::create_dir_all(dotfiles_path.clone()) {
             Ok(()) => println!("Created directory structure"),
             Err(e) => println!("Error creating directory structure: {}", e),
@@ -195,15 +201,21 @@ mod tests {
             existing_file,
             "This line should not show up if symlinking works properly"
         )?;
-        let _ = match rename_symlink_unix(&dotfiles_path, &dotcomfy_path) {
-            Ok(()) => println!("Rename/symlink successful!"),
-            Err(e) => println!("Error when renaming/symlinking existing file: {}", e),
+        let _ = match rename_symlink_unix(&dotfiles_path, &dotcomfy_path, &new_path) {
+            Ok(path) => {
+                println!("Rename/symlink successful!");
+                path
+            }
+            Err(e) => panic!("Error when renaming/symlinking existing file: {}", e),
         };
-        dotcomfy_path.push("config.conf");
-        dotfiles_path.push("config.conf");
+        dotcomfy_path.push(".config/neofetch/config.conf");
+        dotfiles_path.push(".config/neofetch/config.conf");
 
         let data = match read(dotcomfy_path) {
-            Ok(contents) => contents,
+            Ok(contents) => {
+                println!("{:?}", contents.clone());
+                contents
+            }
             Err(e) => {
                 if e.kind() == ErrorKind::NotFound {
                     println!("dotcomfy file not found");
@@ -214,7 +226,10 @@ mod tests {
             }
         };
         let symlink_data = match read(dotfiles_path) {
-            Ok(contents) => contents,
+            Ok(contents) => {
+                println!("{:?}", contents.clone());
+                contents
+            }
             Err(e) => {
                 if e.kind() == ErrorKind::NotFound {
                     println!("symlink not found");
