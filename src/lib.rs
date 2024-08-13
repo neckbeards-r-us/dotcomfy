@@ -190,7 +190,6 @@ mod tests {
             Ok(repo) => repo,
             Err(e) => panic!("Failed to clone: {}", e),
         };
-        // dotfiles_path.push(".config/neofetch");
         let _ = match fs::create_dir_all(dotfiles_path.clone()) {
             Ok(()) => println!("Created directory structure"),
             Err(e) => println!("Error creating directory structure: {}", e),
@@ -207,6 +206,63 @@ mod tests {
                 path
             }
             Err(e) => panic!("Error when renaming/symlinking existing file: {}", e),
+        };
+        dotcomfy_path.push(".config/neofetch/config.conf");
+        dotfiles_path.push(".config/neofetch/config.conf");
+
+        let data = match read(dotcomfy_path) {
+            Ok(contents) => {
+                println!("{:?}", contents.clone());
+                contents
+            }
+            Err(e) => {
+                if e.kind() == ErrorKind::NotFound {
+                    println!("dotcomfy file not found");
+                    vec![0]
+                } else {
+                    vec![0]
+                }
+            }
+        };
+        let symlink_data = match read(dotfiles_path) {
+            Ok(contents) => {
+                println!("{:?}", contents.clone());
+                contents
+            }
+            Err(e) => {
+                if e.kind() == ErrorKind::NotFound {
+                    println!("symlink not found");
+                    vec![0]
+                } else {
+                    vec![0]
+                }
+            }
+        };
+
+        assert_eq!(data, symlink_data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_symlink_file_doesnt_exist() -> Result<(), std::io::Error> {
+        let mut dotcomfy_path: PathBuf = TempDir::new(".dotcomfy")?.path().to_owned().to_path_buf();
+        let mut dotfiles_path: PathBuf = TempDir::new(".dotfiles")?.path().to_owned().to_path_buf();
+        let mut new_path: PathBuf = dotcomfy_path.clone();
+        new_path.push(".config/neofetch");
+        let _ = match Repository::clone(
+            &String::from("https://github.com/neckbeards-r-us/dotfiles.git"),
+            dotcomfy_path.clone(),
+        ) {
+            Ok(repo) => repo,
+            Err(e) => panic!("Failed to clone: {}", e),
+        };
+        let _ = match rename_symlink_unix(&dotfiles_path, &dotcomfy_path, &new_path) {
+            Ok(path) => {
+                println!("Rename/symlink successful!");
+                path
+            }
+            Err(e) => panic!("Error when renaming/symlinking non-existing file: {}", e),
         };
         dotcomfy_path.push(".config/neofetch/config.conf");
         dotfiles_path.push(".config/neofetch/config.conf");
