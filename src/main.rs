@@ -27,7 +27,7 @@ enum Commands {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args = Args::parse();
 
     match &args.command {
         Commands::Install { repo_url, path } => install_repo(repo_url, path),
@@ -37,9 +37,12 @@ fn main() {
         eprintln!("Problem parsing arguments: {err}");
         process::exit(1);
     });
+    */
 
+    /*
     if let Err(e) = dotcomfy::run(config) {
         eprintln!("Application error: {e}");
         process::exit(1);
     }
+    */
 }
