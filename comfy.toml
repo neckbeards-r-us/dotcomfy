@@ -1,0 +1,14 @@
+[repos]
+personal = { url = "github.com/reavessm/dot-files" }
+work = { url = "github.com/reavessm/dot-files", branch = "work" }
+
+[repos.school]
+url = "github.com/reavessm/dot-files"
+branch = "gt"
+
+[repos.full]
+url = "github.com/reavessm/dot-files"
+branch = "full"
+local_path = "~/.config"
+remote_path = "path/to/config/root"
+

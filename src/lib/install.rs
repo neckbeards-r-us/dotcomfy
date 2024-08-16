@@ -145,7 +145,7 @@ fn append_to_path(p: impl Into<OsString>, s: impl AsRef<OsStr>) -> PathBuf {
 #[cfg(test)]
 mod tests {
     // use super::*;
-    use crate::rename_symlink_unix;
+    use super::rename_symlink_unix;
     use git2::Repository;
     use std::fs;
     use std::fs::{read, File};
