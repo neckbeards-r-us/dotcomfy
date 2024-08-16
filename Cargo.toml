@@ -14,7 +14,9 @@ description = "A simple tool for managing your dotfiles"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+dirs = "5.0.1"
 git2 = { version = ">=0.18.3", default-features = false, features = ["https"] }
+walkdir = "2"
 
 # Set the default for dependencies.
 [profile.dev.package."*"]
@@ -24,3 +26,6 @@ opt-level = 3
 strip = true      #"symbols"
 lto = "thin"
 codegen-units = 1 # maximize size-reduction optimizations at the expense of build time
+
+[dev-dependencies]
+tempdir = ">= 0.3.7"
