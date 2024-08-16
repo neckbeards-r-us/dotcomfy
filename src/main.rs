@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use dotcomfy::install_repo;
+use dotcomfy::{install::install_repo, parse::parse_config};
 
 #[derive(Parser)]
 #[command(
@@ -24,6 +24,11 @@ enum Commands {
         #[arg(short, long)]
         path: Option<String>,
     },
+    /// Parse config file, but do nothing
+    Parse {
+        #[arg(short, long, default_value = "comfy.toml")]
+        file_name: String
+    },
 }
 
 fn main() {
@@ -31,6 +36,7 @@ fn main() {
 
     match &args.command {
         Commands::Install { repo_url, path } => install_repo(repo_url, path),
+        Commands::Parse { file_name } => parse_config(file_name),
     }
     /*
     let config = Config::build(&args).unwrap_or_else(|err| {
